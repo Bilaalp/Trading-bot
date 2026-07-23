@@ -1,0 +1,26 @@
+# Copy to config.toml and adjust. config.toml is gitignored.
+# Secrets NEVER go here — API keys come from environment variables
+# (see .env.example).
+
+[bot]
+exchange = "binance"        # any ccxt exchange id: binance, coinbase, kraken, ...
+symbol = "BTC/USDT"
+timeframe = "1h"            # 1m, 5m, 15m, 1h, 4h, 1d
+strategy = "sma_crossover"  # see `python -m trading_bot strategies`
+initial_cash = 10000.0      # starting cash for backtests and paper trading
+
+[strategy_params]
+# Parameters passed to the strategy constructor.
+fast = 10
+slow = 30
+# For rsi_mean_reversion instead:
+# period = 14
+# oversold = 30.0
+# exit_level = 55.0
+
+[risk]
+risk_per_trade = 0.01       # risk 1% of equity per trade
+stop_loss_pct = 0.05        # stop loss 5% below entry
+max_position_pct = 0.25     # never put more than 25% of equity in one position
+max_drawdown_pct = 0.20     # halt all trading if equity drops 20% from its peak
+fee_pct = 0.001             # exchange taker fee (0.1% is typical)
