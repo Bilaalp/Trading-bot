@@ -66,6 +66,20 @@ purpose — loosen them only after you understand what they do.
 | `max_drawdown_pct` | 20% | kill switch: all trading halts past this drawdown |
 | `fee_pct` | 0.1% | fee charged on every fill, in backtests too |
 
+## Tune strategy parameters (without fooling yourself)
+
+```bash
+python -m trading_bot tune --data data/btc_usd_1d.csv --strategy sma_crossover
+```
+
+The tuner grid-searches parameters on the first 70% of the data (train) and
+evaluates only the top candidates once on the remaining 30% (test), against
+a buy-and-hold benchmark. **Judge candidates by the TEST columns** — a great
+train score with a bad test score means the parameters memorized history
+(on real BTC data, the #1 train candidate lost 46% out of sample). Before
+trusting a winner, re-run it over several independent time windows; a
+config that only wins in one period is luck, not edge.
+
 ## Paper trade (recommended for weeks, not days)
 
 Runs the full live pipeline against real market data with simulated money:

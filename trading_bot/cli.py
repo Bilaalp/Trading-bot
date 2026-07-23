@@ -19,6 +19,7 @@ from .broker import CcxtBroker, PaperBroker
 from .config import BotConfig, load_config
 from .data import fetch_ohlcv, load_csv, save_csv, synthetic_candles
 from .engine import TradingEngine
+from .optimize import DEFAULT_PARAM_GRIDS, tune
 from .risk import RiskManager
 from .strategy import STRATEGIES, build_strategy
 
@@ -44,6 +45,29 @@ def cmd_backtest(args: argparse.Namespace) -> None:
     result = run_backtest(candles, strategy, RiskManager(config.risk), config.initial_cash)
     print(f"Strategy: {strategy.name}  |  bars: {len(candles)}")
     print(result.summary())
+
+
+def cmd_tune(args: argparse.Namespace) -> None:
+    config = _load(args)
+    strategy = args.strategy or config.strategy
+    if strategy not in DEFAULT_PARAM_GRIDS:
+        sys.exit(f"no default grid for {strategy!r}; available: {sorted(DEFAULT_PARAM_GRIDS)}")
+    if args.data == "synthetic":
+        candles = synthetic_candles(n=args.bars)
+    else:
+        candles = load_csv(args.data)
+    report = tune(
+        candles,
+        strategy,
+        train_frac=args.train_frac,
+        initial_cash=config.initial_cash,
+        evaluate_top=args.top,
+    )
+    print(report.summary(top=args.top))
+    print(
+        "\nJudge candidates by the TEST columns; strong train + weak test = overfit.\n"
+        "Copy winning params into config.toml [strategy_params] and [risk]."
+    )
 
 
 def cmd_fetch(args: argparse.Namespace) -> None:
@@ -94,6 +118,14 @@ def main(argv: list[str] | None = None) -> None:
     )
     p_backtest.add_argument("--bars", type=int, default=500)
     p_backtest.set_defaults(func=cmd_backtest)
+
+    p_tune = sub.add_parser("tune", help="grid-search params with a train/test holdout")
+    p_tune.add_argument("--data", default="synthetic", help="'synthetic' or a candles CSV path")
+    p_tune.add_argument("--strategy", default=None, help="strategy to tune (default: from config)")
+    p_tune.add_argument("--bars", type=int, default=1000, help="bars when using synthetic data")
+    p_tune.add_argument("--train-frac", type=float, default=0.7)
+    p_tune.add_argument("--top", type=int, default=5, help="candidates to evaluate on the holdout")
+    p_tune.set_defaults(func=cmd_tune)
 
     p_fetch = sub.add_parser("fetch", help="download candles to CSV (needs ccxt)")
     p_fetch.add_argument("--symbol", default=None)

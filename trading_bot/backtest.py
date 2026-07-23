@@ -16,6 +16,9 @@ from .risk import RiskManager
 from .strategy import Strategy
 
 
+_MS_PER_YEAR = 365 * 86_400_000
+
+
 @dataclass
 class BacktestResult:
     initial_cash: float
@@ -23,10 +26,29 @@ class BacktestResult:
     trades: list[Trade]
     equity_curve: list[float] = field(default_factory=list)
     halted_by_drawdown: bool = False
+    buy_hold_return_pct: float = 0.0   # benchmark: hold from first to last close
+    bars_per_year: float = 0.0         # derived from candle timestamps
 
     @property
     def total_return_pct(self) -> float:
         return (self.final_equity / self.initial_cash - 1) * 100
+
+    @property
+    def sharpe(self) -> float:
+        """Annualized Sharpe ratio of per-bar equity returns (risk-free rate 0)."""
+        if len(self.equity_curve) < 3 or not self.bars_per_year:
+            return 0.0
+        returns = [
+            b / a - 1
+            for a, b in zip(self.equity_curve, self.equity_curve[1:])
+            if a > 0
+        ]
+        n = len(returns)
+        mean = sum(returns) / n
+        variance = sum((r - mean) ** 2 for r in returns) / (n - 1)
+        if variance == 0:
+            return 0.0
+        return mean / math.sqrt(variance) * math.sqrt(self.bars_per_year)
 
     @property
     def num_trades(self) -> int:
@@ -54,6 +76,8 @@ class BacktestResult:
             f"Initial cash:    {self.initial_cash:,.2f}",
             f"Final equity:    {self.final_equity:,.2f}",
             f"Total return:    {self.total_return_pct:+.2f}%",
+            f"Buy & hold:      {self.buy_hold_return_pct:+.2f}%",
+            f"Sharpe (ann.):   {self.sharpe:.2f}",
             f"Trades:          {self.num_trades}",
             f"Win rate:        {self.win_rate * 100:.1f}%",
             f"Max drawdown:    {self.max_drawdown_pct:.1f}%",
@@ -112,12 +136,20 @@ def run_backtest(
             )
 
     final_price = candles[-1].close if candles else 0.0
+    buy_hold = (candles[-1].close / candles[0].close - 1) * 100 if candles else 0.0
+    bars_per_year = 0.0
+    if len(candles) > 1:
+        avg_interval = (candles[-1].timestamp - candles[0].timestamp) / (len(candles) - 1)
+        if avg_interval > 0:
+            bars_per_year = _MS_PER_YEAR / avg_interval
     return BacktestResult(
         initial_cash=initial_cash,
         final_equity=account.equity(final_price),
         trades=account.trades,
         equity_curve=equity_curve,
         halted_by_drawdown=risk.halted,
+        buy_hold_return_pct=buy_hold,
+        bars_per_year=bars_per_year,
     )
 
 
