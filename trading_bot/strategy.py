@@ -51,7 +51,8 @@ class SmaCrossover(Strategy):
     def on_candle(self, candles: Sequence[Candle], has_position: bool) -> Signal | None:
         if len(candles) < self.warmup:
             return None
-        closes = [c.close for c in candles]
+        # Only the last slow+1 closes matter; keeps long backtests O(n).
+        closes = [c.close for c in candles[-(self.slow + 1):]]
         fast = sma(closes, self.fast)
         slow = sma(closes, self.slow)
         prev_fast, prev_slow = fast[-2], slow[-2]
@@ -90,7 +91,10 @@ class RsiMeanReversion(Strategy):
     def on_candle(self, candles: Sequence[Candle], has_position: bool) -> Signal | None:
         if len(candles) < self.warmup:
             return None
-        closes = [c.close for c in candles]
+        # Wilder smoothing technically spans all history, but converges fast;
+        # a 10-period tail is accurate to well under a point and keeps long
+        # backtests O(n).
+        closes = [c.close for c in candles[-(self.period * 10):]]
         value = rsi(closes, self.period)[-1]
         if value is None:
             return None

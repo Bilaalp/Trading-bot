@@ -78,8 +78,10 @@ def run_backtest(
     account = Account(cash=initial_cash)
     open_order: Order | None = None
     equity_curve: list[float] = []
+    history: list[Candle] = []  # grows in place; avoids O(n^2) slicing
 
     for i, candle in enumerate(candles):
+        history.append(candle)
         # 1. Stops fire intrabar, before the strategy acts on the close.
         if account.position and risk.stop_hit(account.position, candle):
             open_order = _close_position(
@@ -99,7 +101,7 @@ def run_backtest(
             break
 
         # 3. Strategy sees history up to and including this closed bar.
-        signal = strategy.on_candle(candles[: i + 1], account.position is not None)
+        signal = strategy.on_candle(history, account.position is not None)
         if signal is None:
             continue
         if signal.side is Side.BUY and risk.can_open(account, candle.close):

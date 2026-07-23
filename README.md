@@ -27,6 +27,17 @@ python -m trading_bot strategies
 
 ## Backtest on real market data
 
+Real BTC/USD daily candles (Aug 2010 – Jul 2026) ship with the repo, so this
+works offline with no dependencies:
+
+```bash
+python -m trading_bot backtest --data data/btc_usd_1d.csv
+```
+
+The file is aggregated from the hourly OHLCV dataset in
+[mouadja02/bitcoin-technical-indicators-dataset](https://github.com/mouadja02/bitcoin-technical-indicators-dataset).
+To fetch fresh candles for any symbol yourself:
+
 ```bash
 pip install ccxt
 
