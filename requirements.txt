@@ -1,0 +1,6 @@
+# Core bot (backtesting, paper trading on saved/synthetic data): no dependencies.
+# Live market data and live trading:
+ccxt>=4.0
+
+# Development:
+pytest>=8.0

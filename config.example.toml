@@ -1,0 +1,38 @@
+# Copy to config.toml and adjust. config.toml is gitignored.
+# Secrets NEVER go here — API keys come from environment variables
+# (see .env.example).
+
+[bot]
+exchange = "binance"        # any ccxt exchange id: binance, coinbase, kraken, ...
+symbol = "BTC/USDT"
+timeframe = "1h"            # 1m, 5m, 15m, 1h, 4h, 1d
+strategy = "sma_crossover"  # see `python -m trading_bot strategies`
+initial_cash = 10000.0      # starting cash for backtests and paper trading
+
+[strategy_params]
+# Parameters passed to the strategy constructor. These defaults came from
+# `python -m trading_bot tune --data data/btc_usd_1d.csv` (out-of-sample
+# holdout + multi-window robustness check); re-tune for other symbols
+# or timeframes.
+fast = 5
+slow = 50
+# For rsi_mean_reversion instead (tuned on the same data):
+# period = 21
+# oversold = 25.0
+# exit_level = 60.0
+
+[risk]
+# Conservative sizing: only ~20% of equity deployed per entry. To compete
+# with a buy-and-hold benchmark (100% deployed) use the aggressive block
+# below instead — at the cost of much deeper drawdowns.
+risk_per_trade = 0.01       # risk 1% of equity per trade
+stop_loss_pct = 0.05        # stop loss 5% below entry
+max_position_pct = 0.25     # never put more than 25% of equity in one position
+max_drawdown_pct = 0.20     # halt all trading if equity drops 20% from its peak
+fee_pct = 0.001             # exchange taker fee (0.1% is typical)
+
+# Aggressive, fully-deployed sizing (what the tuner assumes):
+# risk_per_trade = 0.10
+# stop_loss_pct = 0.10
+# max_position_pct = 1.0
+# max_drawdown_pct = 0.5
